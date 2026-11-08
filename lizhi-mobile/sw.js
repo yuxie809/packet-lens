@@ -1,0 +1,5 @@
+const SHELL='lizhi-mobile-v1.1';
+const FILES=['./','./index.html','./manifest.webmanifest','./icon.svg'];
+self.addEventListener('install',event=>{event.waitUntil(caches.open(SHELL).then(cache=>cache.addAll(FILES)).then(()=>self.skipWaiting()))});
+self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==SHELL).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
+self.addEventListener('fetch',event=>{const url=new URL(event.request.url);if(url.origin!==self.location.origin||event.request.method!=='GET')return;event.respondWith(fetch(event.request).then(res=>{if(res.ok&&url.pathname.endsWith('/index.html')){let copy=res.clone();caches.open(SHELL).then(c=>c.put(event.request,copy))}return res}).catch(()=>caches.match(event.request)))})
