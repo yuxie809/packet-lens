@@ -171,7 +171,7 @@ function syncLyrics(force=false){
 }
 function setLyricsView(mode){
  lyricsMode=mode;
- $('now-cover-frame').classList.toggle('hidden',mode==='lyrics');
+ $('now-cover').classList.toggle('hidden',mode==='lyrics');
  $('lyrics-frame').classList.toggle('hidden',mode!=='lyrics');
  for(const key of ['cover','lyrics']){const b=$('view-'+key);b.classList.toggle('active',key===mode);b.setAttribute('aria-pressed',String(key===mode))}
  if(mode==='lyrics')syncLyrics(true);
