@@ -1,0 +1,19 @@
+{
+  "id": "./",
+  "name": "李志 · 想听就听",
+  "short_name": "李志·听",
+  "description": "独立移动版李志音乐播放器",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#111210",
+  "theme_color": "#111210",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
