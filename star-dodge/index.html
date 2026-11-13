@@ -33,6 +33,25 @@
   .mini{color:var(--muted);font-size:12px;line-height:1.8;margin:16px 0 0}
   .final{font-size:27px;font-weight:800;color:var(--gold);margin:0 0 18px}
   .final small{font-size:13px;color:#9cb0cf;font-weight:400}
+
+  .texture-toggle{min-width:63px;font-size:12px;font-weight:800;letter-spacing:.4px}
+  .texture-toggle.active{border-color:var(--cyan);color:var(--cyan);background:#11343e}
+  .scan-panel{position:absolute;z-index:3;top:max(82px,calc(env(safe-area-inset-top) + 68px));right:13px;width:min(318px,calc(100% - 26px));padding:14px;border:1px solid #456279;border-radius:17px;background:#0b1528ed;box-shadow:0 12px 35px #0009;backdrop-filter:blur(13px)}
+  .scan-panel[hidden]{display:none}
+  .scan-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+  .scan-title strong{font-size:14px;letter-spacing:.5px}
+  .scan-close{cursor:pointer;color:#c8d6e9;background:none;border:0;font-size:21px;line-height:1;padding:2px 6px}
+  .scan-settings{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:#9fb3d0;margin-bottom:11px}
+  .scan-settings select{background:#162840;color:#dceaf8;border:1px solid #48607b;border-radius:6px;padding:3px 5px;font:inherit}
+  .scan-body{display:flex;align-items:center;gap:13px}
+  #matrixCanvas{width:142px;height:142px;border:1px solid #344760;border-radius:6px;image-rendering:auto;flex:none}
+  .scan-values{display:grid;grid-template-columns:1fr;gap:8px;min-width:0}
+  .scan-values div{border-left:2px solid #41687a;padding-left:9px;min-width:0}
+  .scan-values small{display:block;font-size:10px;color:#98aacc}
+  .scan-values strong{display:block;font-size:15px;font-variant-numeric:tabular-nums}
+  .scan-signal{font-size:12px;margin-top:12px;border:1px solid #315463;background:#102a38;border-radius:9px;padding:8px 10px;color:#b8f9eb}
+  .scan-foot{font-size:10px;color:#9bb0cf;line-height:1.6;margin-top:8px}
+  @media(max-width:360px){#matrixCanvas{width:122px;height:122px}.scan-body{gap:9px}.scan-values strong{font-size:13px}}
   @media(max-width:520px){.frame{border:none;border-radius:0}.panel{padding:28px 20px}.metric{min-width:93px;padding:8px 10px}.metric strong{font-size:21px}}
   @media(prefers-reduced-motion:reduce){.shade{backdrop-filter:none}}
 </style>
@@ -44,16 +63,32 @@
     <div class="metric"><small>得 分</small><strong id="score">0</strong></div>
     <div class="right">
       <div class="metric"><small>最高分</small><strong id="best">0</strong></div>
+      <button id="textureToggle" class="pause texture-toggle" aria-label="打开灰度共生矩阵纹理雷达" aria-pressed="false" title="灰度共生矩阵">GLCM</button>
       <button id="pause" class="pause" aria-label="暂停游戏" title="暂停 / 继续">Ⅱ</button>
     </div>
   </div>
-  <div class="hint" id="hint">拖动手指或使用 ← → / A D 移动 · 空格暂停</div>
+  <aside class="scan-panel" id="scanPanel" hidden aria-label="灰度共生矩阵实时分析">
+    <div class="scan-title"><strong>灰度共生矩阵 · GLCM</strong><button id="scanClose" class="scan-close" aria-label="关闭纹理面板">×</button></div>
+    <div class="scan-settings"><label>方向 θ <select id="glcmDirection" aria-label="GLCM方向"><option value="0">0°</option><option value="45">45°</option><option value="90">90°</option><option value="135">135°</option></select></label><span>8 灰阶 · d = 1 · 对称归一化</span></div>
+    <div class="scan-body">
+      <canvas id="matrixCanvas" width="160" height="160" aria-label="8乘8灰度共生矩阵热力图"></canvas>
+      <div class="scan-values">
+        <div><small>对比度 Contrast</small><strong id="glcmContrast">0.000</strong></div>
+        <div><small>同质性 Homogeneity</small><strong id="glcmHomogeneity">0.000</strong></div>
+        <div><small>能量 Energy</small><strong id="glcmEnergy">0.000</strong></div>
+        <div><small>熵 Entropy</small><strong id="glcmEntropy">0.000</strong></div>
+      </div>
+    </div>
+    <div class="scan-signal" id="scanSignal" aria-live="off">纹理雷达已启动 · 正在扫描画面</div>
+    <div class="scan-foot">实时读取游戏画面 → 灰度拉伸并量化为 8 级 → 统计邻接灰度对。低对比度区域会被浅色扫描标记，仅供躲避参考，并不代表一定安全。</div>
+  </aside>
+  <div class="hint" id="hint">拖动或使用 ← → / A D 移动 · 点 GLCM 打开纹理雷达</div>
   <section class="shade" id="overlay" aria-live="polite">
     <div class="panel">
       <div class="crest" id="crest" aria-hidden="true">✦</div>
       <h1 id="title">星际闪避</h1>
       <p class="subtitle" id="subtitle">驾驶飞船穿过流星雨。<br>能坚持多久，就看你的操作了。</p>
-      <div class="rules" id="rules"><span>✦ 接星星 +10 分</span><span>☄ 躲陨石</span></div>
+      <div class="rules" id="rules"><span>✦ 接星星 +10 分</span><span>☄ 躲陨石</span><span>GLCM 纹理雷达</span></div>
       <p class="final" id="final" hidden></p>
       <button class="action" id="start">开始游戏</button>
       <p class="mini" id="mini">手机：左右拖动飞船<br>电脑：← → 或 A D 移动</p>
@@ -77,6 +112,108 @@
   const finalEl = document.getElementById('final');
   const startBtn = document.getElementById('start');
   const miniEl = document.getElementById('mini');
+  const textureBtn = document.getElementById('textureToggle');
+  const scanPanel = document.getElementById('scanPanel');
+  const scanClose = document.getElementById('scanClose');
+  const glcmDirection = document.getElementById('glcmDirection');
+  const matrixCanvas = document.getElementById('matrixCanvas');
+  const matrixCtx = matrixCanvas.getContext('2d');
+  const glcmContrastEl = document.getElementById('glcmContrast');
+  const glcmHomogeneityEl = document.getElementById('glcmHomogeneity');
+  const glcmEnergyEl = document.getElementById('glcmEnergy');
+  const glcmEntropyEl = document.getElementById('glcmEntropy');
+  const scanSignalEl = document.getElementById('scanSignal');
+  const sampleCanvas = document.createElement('canvas');
+  sampleCanvas.width = sampleCanvas.height = 80;
+  const sampleCtx = sampleCanvas.getContext('2d', {willReadFrequently:true});
+  const sampleSize=80, grayLevels=8;
+  let scanVisible=false, lastScan=0, calmerLane=0, laneGap=0, scanContrast=0;
+  function coMatrix(levels,x0,x1,y0,y1,dx,dy){
+    const m=new Float64Array(grayLevels*grayLevels);
+    let pairs=0;
+    for(let y=y0;y<y1;y++){
+      for(let x=x0;x<x1;x++){
+        const nx=x+dx, ny=y+dy;
+        if(nx<x0||nx>=x1||ny<y0||ny>=y1)continue;
+        const a=levels[y*sampleSize+x],b=levels[ny*sampleSize+nx];
+        m[a*grayLevels+b]++;m[b*grayLevels+a]++;pairs+=2;
+      }
+    }
+    if(pairs)for(let i=0;i<m.length;i++)m[i]/=pairs;
+    return m;
+  }
+  function glcmStats(m){
+    let contrast=0,homogeneity=0,asm=0,entropy=0;
+    for(let i=0;i<grayLevels;i++)for(let j=0;j<grayLevels;j++){
+      const p=m[i*grayLevels+j],delta=i-j;
+      contrast+=p*delta*delta;
+      homogeneity+=p/(1+delta*delta);
+      asm+=p*p;
+      if(p>0)entropy-=p*Math.log2(p);
+    }
+    return {contrast,homogeneity,energy:Math.sqrt(asm),entropy};
+  }
+  function drawMatrix(m){
+    const side=matrixCanvas.width, cell=side/grayLevels;
+    let peak=0;for(const p of m)peak=Math.max(peak,p);
+    matrixCtx.clearRect(0,0,side,side);
+    for(let y=0;y<grayLevels;y++)for(let x=0;x<grayLevels;x++){
+      const p=m[y*grayLevels+x];
+      const intensity=peak>0?Math.pow(p/peak,.37):0;
+      matrixCtx.fillStyle='rgb('+Math.round(17+77*intensity)+','+Math.round(30+180*intensity)+','+Math.round(47+170*intensity)+')';
+      matrixCtx.fillRect(x*cell,y*cell,cell-1,cell-1);
+    }
+    matrixCtx.strokeStyle='#dffcf884';matrixCtx.lineWidth=1;
+    matrixCtx.strokeRect(.5,.5,side-1,side-1);
+  }
+  function scanTexture(){
+    if(!scanVisible||!W||!H)return;
+    sampleCtx.drawImage(canvas,0,0,sampleSize,sampleSize);
+    const px=sampleCtx.getImageData(0,0,sampleSize,sampleSize).data;
+    const luminance=new Uint8Array(sampleSize*sampleSize);
+    const histogram=new Uint32Array(256);
+    for(let i=0;i<luminance.length;i++){
+      const j=i*4;
+      const v=Math.round(px[j]*.299+px[j+1]*.587+px[j+2]*.114);
+      luminance[i]=v;histogram[v]++;
+    }
+    // Trim the tails of the luminance distribution to keep dark scenes legible.
+    const percentile=(quantile)=>{
+      const wanted=Math.max(1,Math.floor(luminance.length*quantile));
+      let count=0;for(let v=0;v<256;v++){count+=histogram[v];if(count>=wanted)return v;}
+      return 255;
+    };
+    const low=percentile(.03),high=Math.max(low+1,percentile(.97));
+    const levels=new Uint8Array(luminance.length);
+    for(let i=0;i<levels.length;i++)
+      levels[i]=Math.min(7,Math.floor(Math.max(0,(luminance[i]-low)/(high-low))*8));
+    const offsets={'0':[1,0],'45':[1,-1],'90':[0,-1],'135':[-1,-1]};
+    const [dx,dy]=offsets[glcmDirection.value]||offsets['0'];
+    const m=coMatrix(levels,0,sampleSize,0,sampleSize,dx,dy),s=glcmStats(m);
+    scanContrast=s.contrast;
+    glcmContrastEl.textContent=s.contrast.toFixed(3);
+    glcmHomogeneityEl.textContent=s.homogeneity.toFixed(3);
+    glcmEnergyEl.textContent=s.energy.toFixed(3);
+    glcmEntropyEl.textContent=s.entropy.toFixed(3);
+    drawMatrix(m);
+    // Compare GLCM contrasts in two independent upper-field regions.
+    const left=glcmStats(coMatrix(levels,1,39,10,65,dx,dy)).contrast;
+    const right=glcmStats(coMatrix(levels,41,79,10,65,dx,dy)).contrast;
+    laneGap=Math.abs(left-right);
+    calmerLane=laneGap>Math.max(.16,.13*Math.max(left,right))?(left<right?-1:1):0;
+    scanSignalEl.textContent=calmerLane===0
+      ?'纹理雷达：左右纹理接近，继续观察'
+      :('纹理雷达：'+(calmerLane<0?'左侧':'右侧')+'较平稳 · 对比度 '+Math.min(left,right).toFixed(2)+' / '+Math.max(left,right).toFixed(2));
+  }
+  function toggleScan(force){
+    scanVisible=typeof force==='boolean'?force:!scanVisible;
+    scanPanel.hidden=!scanVisible;
+    textureBtn.classList.toggle('active',scanVisible);
+    textureBtn.setAttribute('aria-pressed',String(scanVisible));
+    textureBtn.setAttribute('aria-label',scanVisible?'关闭灰度共生矩阵纹理雷达':'打开灰度共生矩阵纹理雷达');
+    if(scanVisible){lastScan=0;scanTexture();}
+    else{calmerLane=0;laneGap=0;}
+  }
   let W=0,H=0,dpr=1,playing=false,paused=false,dead=false,lastTime=0,elapsed=0,score=0;
   let ship={x:0,y:0,r:17,tx:0}, drops=[],particles=[], stars=[],spawnTimer=0,shake=0;
   let best=0; try{ best=Number(localStorage.getItem('star-dodge-best')||0)||0; }catch(_e){}
@@ -194,6 +331,21 @@
         ctx.fillStyle='#8e304f';ctx.beginPath();ctx.arc(-d.r*.23,-d.r*.15,d.r*.25,0,Math.PI*2);ctx.arc(d.r*.32,d.r*.24,d.r*.16,0,Math.PI*2);ctx.fill();ctx.restore();
       }
     }
+    // Real-time GLCM marks the less textured lane, not guaranteed safety.
+    if(scanVisible && playing && !paused && calmerLane!==0){
+      ctx.save();
+      const mid=W/2;
+      ctx.fillStyle='rgba(114,246,233,.055)';
+      if(calmerLane<0)ctx.fillRect(0,H*.23,mid,H*.55);
+      else ctx.fillRect(mid,H*.23,mid,H*.55);
+      ctx.strokeStyle='rgba(114,246,233,.33)';ctx.lineWidth=1;
+      const x=calmerLane<0?mid*.5:mid*1.5;
+      const lineY=H*(.28 + (elapsed%2)/2*.45);
+      ctx.beginPath();ctx.moveTo(x-34,lineY);ctx.lineTo(x+34,lineY);ctx.stroke();
+      ctx.font='11px system-ui';ctx.textAlign='center';ctx.fillStyle='#b4fff0';
+      ctx.fillText('纹理较平稳',x,H*.26);
+      ctx.restore();
+    }
     // Ship with layered jet flame.
     if(!dead){
       ctx.save();ctx.translate(ship.x,ship.y);
@@ -209,7 +361,9 @@
   function tick(t){
     const dt=Math.min(.04,(t-lastTime)/1000||0);lastTime=t;
     if(playing&&!paused)update(dt);
-    paint();requestAnimationFrame(tick);
+    paint();
+    if(scanVisible && t-lastScan>=440){scanTexture();lastScan=t;}
+    requestAnimationFrame(tick);
   }
   function pointerX(ev){const rect=canvas.getBoundingClientRect();ship.tx=clamp(ev.clientX-rect.left,ship.r+8,W-ship.r-8);}
   canvas.addEventListener('pointerdown',e=>{pointerDown=true;pointerX(e);try{canvas.setPointerCapture(e.pointerId);}catch(_e){}});
@@ -227,6 +381,9 @@
   window.addEventListener('blur',()=>{keys.left=false;keys.right=false;if(playing&&!paused)togglePause();});
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&playing&&!paused)togglePause();});
   pauseBtn.addEventListener('click',togglePause);
+  textureBtn.addEventListener('click',()=>toggleScan());
+  scanClose.addEventListener('click',()=>toggleScan(false));
+  glcmDirection.addEventListener('change',()=>scanTexture());
   startBtn.addEventListener('click',()=>{if(playing&&paused)togglePause();else reset();});
   window.addEventListener('resize',resize);
   resize();requestAnimationFrame(t=>{lastTime=t;requestAnimationFrame(tick);});
