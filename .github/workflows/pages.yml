@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "glcm-ring-jump/**"
+      - "pvz-glcm/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
