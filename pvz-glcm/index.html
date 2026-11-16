@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>灰度花园 · 无限防线</title>
+<style>
+:root{--ink:#202820;--paper:#f4f0df;--green:#477b48;--gold:#f3c85b}
+*{box-sizing:border-box}body{margin:0;background:#18241d;color:var(--ink);font-family:system-ui,-apple-system,"PingFang SC",sans-serif;display:flex;justify-content:center;min-height:100vh}
+#app{width:min(100%,1000px);padding:12px}
+header{display:flex;align-items:center;justify-content:space-between;color:#f6f0dc;gap:10px;flex-wrap:wrap}
+h1{font-size:clamp(20px,4vw,30px);margin:3px 0;font-weight:900;letter-spacing:2px}
+.sub{font-size:11px;color:#b9c7ae;letter-spacing:1px}
+.stats{display:flex;gap:8px;flex-wrap:wrap}.pill{background:#29392d;border:1px solid #60765c;color:#fff1c7;border-radius:9px;padding:7px 11px;font-weight:800;font-size:13px}
+#toolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;background:#e8e0c6;padding:8px;border-radius:12px 12px 0 0;margin-top:12px}
+.seed{border:2px solid #9d9b79;background:#f8f1d9;border-radius:9px;padding:5px 8px;min-width:82px;display:flex;align-items:center;gap:6px;cursor:pointer;color:#253326;font-weight:800;font-size:12px}
+.seed.active{border-color:#d28a25;background:#ffe49b;box-shadow:0 0 0 2px #fff3c6 inset}.seed:disabled{opacity:.45}
+.seed .emoji{font-size:24px}.seed small{display:block;font-size:10px;font-weight:600;color:#67715d}
+#sunbank{margin-left:auto;background:#f5d46d;border-radius:8px;padding:8px 12px;font-weight:900;white-space:nowrap}
+#boardwrap{position:relative;background:#668f4c;border:7px solid #d7c69a;border-top:0;overflow:hidden;box-shadow:0 8px 22px #0006}
+canvas{display:block;width:100%;height:auto;touch-action:manipulation;cursor:crosshair}
+#hint{background:#e8e0c6;padding:7px 11px;font-size:12px;color:#475341;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+#bottom{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.panel{background:#e9e3d0;border-radius:12px;padding:10px 12px;min-width:0}
+.panel h2{font-size:13px;margin:0 0 7px;letter-spacing:1px}.muted{font-size:11px;color:#697363}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.metric{background:#f8f5e9;border-radius:7px;padding:6px 4px;text-align:center}.metric b{display:block;font-size:15px}.metric span{font-size:9px;color:#687263}
+.matrix{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;max-width:210px}.cell{aspect-ratio:1;border-radius:3px;display:grid;place-items:center;font-size:10px;font-weight:800;color:#152016}
+.matrixline{display:flex;gap:12px;align-items:center}.matrixinfo{font-size:10px;line-height:1.7;color:#52604e}
+.actions{display:flex;gap:7px;margin-top:9px}.actions button{border:0;border-radius:8px;padding:8px 12px;background:#405f3e;color:white;font-weight:800;cursor:pointer}.actions button.secondary{background:#7c806a}
+#overlay{position:absolute;inset:0;background:#142019c9;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;color:#fff}
+#overlay[hidden]{display:none}.modal{max-width:440px}.modal h2{font-size:clamp(25px,6vw,40px);margin:0 0 8px}.modal p{line-height:1.7;color:#e0e8d9;font-size:13px}.modal button{background:#f1ca60;color:#263321;border:0;border-radius:10px;padding:12px 25px;font-size:16px;font-weight:900}
+footer{text-align:center;color:#93a38f;font-size:10px;padding:10px}
+@media(max-width:600px){#app{padding:7px}.seed{min-width:69px;padding:4px 5px}.seed .emoji{font-size:20px}.seed span:last-child{font-size:10px}#bottom{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(4,1fr)}.matrix{max-width:165px}}
+</style></head>
+<body><main id="app">
+<header><div><h1>灰度花园 <span style="color:#f3c85b">∞</span></h1><div class="sub">GRAY-LEVEL CO-OCCURRENCE DEFENSE SYSTEM</div></div><div class="stats"><div class="pill">第 <span id="wave">1</span> 波</div><div class="pill">击退 <span id="kills">0</span></div><div class="pill">生命 <span id="lives">5</span></div></div></header>
+<section id="toolbar">
+<button class="seed active" data-plant="pea"><span class="emoji">🌱</span><span>豌豆射手<small>100 阳光</small></span></button>
+<button class="seed" data-plant="sun"><span class="emoji">🌻</span><span>向日葵<small>50 阳光</small></span></button>
+<button class="seed" data-plant="wall"><span class="emoji">🥔</span><span>坚果墙<small>75 阳光</small></span></button>
+<button class="seed" data-plant="ice"><span class="emoji">❄️</span><span>寒冰射手<small>175 阳光</small></span></button>
+<div id="sunbank">☀ <span id="sun">150</span></div>
+</section>
+<div id="boardwrap"><canvas id="game" width="900" height="500"></canvas><div id="overlay"><div class="modal"><h2>守住这片灰度花园</h2><p>种植植物，阻止僵尸穿过草坪。每一波结束后，下一波会继续增强——没有最终关卡。<br>收集阳光补充资源；点击植物卡片，再点击草坪放置。<br><b>灰度共生矩阵（GLCM）</b>会实时采样战场纹理，并计算对比度、能量、同质性。</p><button id="start">开始防守</button></div></div></div>
+<div id="hint"><span>操作：选植物 → 点击格子；点击阳光收集。右键/铲子可移除植物。</span><span id="status">等待开战</span></div>
+<div id="bottom">
+<section class="panel"><h2>战场纹理 · GLCM 4×4</h2><div class="matrixline"><div class="matrix" id="matrix"></div><div class="matrixinfo"><div>方向：水平 0°</div><div>量化：4 灰度级</div><div>采样：实时战场</div><div id="sample">等待采样…</div></div></div></section>
+<section class="panel"><h2>纹理特征值</h2><div class="metrics"><div class="metric"><b id="contrast">0.00</b><span>对比度</span></div><div class="metric"><b id="energy">0.00</b><span>能量</span></div><div class="metric"><b id="homogeneity">0.00</b><span>同质性</span></div><div class="metric"><b id="correlation">0.00</b><span>相关性</span></div></div><div class="muted" style="margin-top:7px">GLCM 根据草坪、植物、僵尸与弹丸的灰度分布动态更新；数值用于战场纹理观测，不影响胜负判定。</div><div class="actions"><button id="shovel" class="secondary">🪏 铲子：关闭</button><button id="pause" class="secondary">暂停</button><button id="restart">重新开始</button></div></section>
+</div><footer>无限波次 · 难度随时间递增 · 离线单文件运行</footer>
+</main>
+<script>
+(()=>{
+const c=document.getElementById('game'),ctx=c.getContext('2d'),W=900,H=500,rows=5,cols=9,cw=100,ch=100,top=0;
+const $=id=>document.getElementById(id);
+let plants=[],zombies=[],shots=[],suns=[],particles=[],sun=150,kills=0,lives=5,wave=1,selected='pea',shovel=false,running=false,paused=false,ended=false,last=0,spawnTimer=0,sunTimer=0,glcmTimer=0,elapsed=0;
+const costs={pea:100,sun:50,wall:75,ice:175},plantEmoji={pea:'🌱',sun:'🌻',wall:'🥔',ice:'🌿'};
+function reset(){plants=[];zombies=[];shots=[];suns=[];particles=[];sun=150;kills=0;lives=5;wave=1;spawnTimer=2;sunTimer=5;elapsed=0;paused=false;ended=false;running=true;shovel=false;selected='pea';$('overlay').hidden=true;$('status').textContent='防线运行中';sync();selectCard();$('shovel').textContent='🪏 铲子：关闭';$('pause').textContent='暂停'}
+function sync(){$('sun').textContent=sun;$('kills').textContent=kills;$('lives').textContent=lives;$('wave').textContent=wave}
+function selectCard(){document.querySelectorAll('.seed').forEach(b=>b.classList.toggle('active',b.dataset.plant===selected));}
+document.querySelectorAll('.seed').forEach(b=>b.onclick=()=>{if(!running||paused)return;shovel=false;selected=b.dataset.plant;selectCard();$('shovel').textContent='🪏 铲子：关闭'});
+$('shovel').onclick=()=>{if(!running)return;shovel=!shovel;selected='';selectCard();$('shovel').textContent=shovel?'🪏 铲子：开启':'🪏 铲子：关闭'};
+$('pause').onclick=()=>{if(!running)return;paused=!paused;$('pause').textContent=paused?'继续':'暂停';$('status').textContent=paused?'已暂停':'防线运行中';last=performance.now()};
+$('restart').onclick=()=>reset();$('start').onclick=()=>reset();
+function cellAt(x,y){return {col:Math.floor(x/cw),row:Math.floor(y/ch)}}
+c.addEventListener('pointerdown',e=>{const r=c.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;
+for(let i=suns.length-1;i>=0;i--){let s=suns[i];if(Math.hypot(x-s.x,y-s.y)<25){sun+=s.value;suns.splice(i,1);sync();return}}
+if(!running||paused)return;let {col,row}=cellAt(x,y);if(col<0||col>=cols||row<0||row>=rows)return;let idx=plants.findIndex(p=>p.col===col&&p.row===row);
+if(shovel){if(idx>=0)plants.splice(idx,1);return}
+if(idx>=0||!selected)return;let cost=costs[selected];if(sun<cost){$('status').textContent='阳光不足';return}sun-=cost;plants.push({col,row,type:selected,hp:selected==='wall'?700:100,fire:0,shine:0});sync();
+});
+c.addEventListener('contextmenu',e=>{e.preventDefault();const r=c.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height,{col,row}=cellAt(x,y);let i=plants.findIndex(p=>p.col===col&&p.row===row);if(i>=0)plants.splice(i,1)});
+function spawn(){let row=Math.floor(Math.random()*rows),type=Math.random()<Math.min(.32,.08+wave*.012)?'cone':'normal';zombies.push({x:W+25,y:row*ch+50,row,hp:type==='cone'?260+wave*15:150+wave*12,max:type==='cone'?260+wave*15:150+wave*12,speed:(type==='cone'?13:17)+wave*.45,attack:0,type,slow:0,frame:0})}
+function burst(x,y,color,n=7){for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*90,vy:(Math.random()-.5)*90,life:.5,color})}
+function update(dt){elapsed+=dt;spawnTimer-=dt;sunTimer-=dt;if(spawnTimer<=0){spawn();spawnTimer=Math.max(1.8,6.5-wave*.24)*(.75+Math.random()*.5)}
+if(sunTimer<=0){suns.push({x:80+Math.random()*740,y:30+Math.random()*420,value:25,life:9});sunTimer=7+Math.random()*4}
+if(kills>=wave*5){wave++;$('status').textContent='第 '+wave+' 波来袭';sync()}
+for(let p of plants){p.fire-=dt;p.shine+=dt;if(p.type==='sun'&&p.shine>7){p.shine=0;suns.push({x:p.col*cw+50,y:p.row*ch+25,value:25,life:12})}
+if((p.type==='pea'||p.type==='ice')&&p.fire<=0&&zombies.some(z=>z.row===p.row&&z.x>p.col*cw+50)){shots.push({x:p.col*cw+68,y:p.row*ch+50,row:p.row,damage:p.type==='ice'?28:25,ice:p.type==='ice'});p.fire=p.type==='ice'?1.8:1.35}}
+for(let s of shots){s.x+=250*dt;let z=zombies.find(z=>z.row===s.row&&Math.abs(z.x-s.x)<22);if(z){z.hp-=s.damage;if(s.ice)z.slow=2;burst(s.x,s.y,s.ice?'#a9eaff':'#8acb53',3);s.dead=true;if(z.hp<=0){burst(z.x,z.y,'#a7a58c',12);z.dead=true;kills++;sun+=5}}}shots=shots.filter(s=>!s.dead&&s.x<W+20);
+for(let z of zombies){z.frame+=dt;let p=plants.find(p=>p.row===z.row&&Math.abs(z.x-(p.col*cw+50))<35);if(p){z.attack-=dt;if(z.attack<=0){p.hp-=z.type==='cone'?18:25;z.attack=.7;if(p.hp<=0){plants.splice(plants.indexOf(p),1);burst(p.col*cw+50,p.row*ch+50,'#91b66a',8)}}}else z.x-=(z.speed*(z.slow>0?.48:1))*dt;if(z.slow>0)z.slow-=dt;if(z.x<0){z.dead=true;lives--;sync();if(lives<=0)gameOver()}}
+zombies=zombies.filter(z=>!z.dead);
+for(let s of suns)s.life-=dt;suns=suns.filter(s=>s.life>0);
+for(let p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt}particles=particles.filter(p=>p.life>0);
+}
+function gameOver(){running=false;ended=true;$('overlay').hidden=false;$('overlay').querySelector('h2').textContent='花园失守';$('overlay').querySelector('p').innerHTML=`你守到了第 <b>${wave}</b> 波，击退 <b>${kills}</b> 只僵尸。<br>重新布置防线，再挑战更高波次。`;$('start').textContent='再来一局';$('status').textContent='防守失败'}
+function draw(){ctx.clearRect(0,0,W,H);for(let r=0;r<rows;r++)for(let col=0;col<cols;col++){ctx.fillStyle=(r+col)%2?'#78a957':'#83b45e';ctx.fillRect(col*cw,r*ch,cw,ch);ctx.strokeStyle='#638d4b';ctx.strokeRect(col*cw,r*ch,cw,ch)}
+// lawn details
+for(let i=0;i<80;i++){let x=(i*137)%W,y=(i*83)%H;ctx.fillStyle='rgba(35,75,35,.12)';ctx.fillRect(x,y,2,5)}
+for(let p of plants){let x=p.col*cw+50,y=p.row*ch+52;ctx.font='45px serif';ctx.textAlign='center';ctx.fillText(plantEmoji[p.type],x,y+14);if(p.type==='pea'||p.type==='ice'){ctx.fillStyle=p.type==='ice'?'#b7ecf3':'#477b36';ctx.beginPath();ctx.arc(x+18,y-13,11,0,7);ctx.fill()}if(p.type==='wall'){ctx.fillStyle='#fff';ctx.fillRect(x-20,y-38,40,5);ctx.fillStyle='#8a5737';ctx.fillRect(x-20,y-38,40*Math.max(0,p.hp/700),5)}}
+for(let z of zombies){ctx.font='43px serif';ctx.textAlign='center';ctx.fillText('🧟',z.x,z.y+15);ctx.fillStyle='#362d27';ctx.fillRect(z.x-22,z.y-39,44,5);ctx.fillStyle='#b94d3d';ctx.fillRect(z.x-22,z.y-39,44*Math.max(0,z.hp/z.max),5);if(z.type==='cone'){ctx.font='18px serif';ctx.fillText('🔺',z.x,z.y-22)}}
+for(let s of shots){ctx.fillStyle=s.ice?'#b9f3ff':'#b1e45a';ctx.beginPath();ctx.arc(s.x,s.y,7,0,7);ctx.fill()}
+for(let s of suns){ctx.font='29px serif';ctx.fillText('☀️',s.x,s.y);ctx.fillStyle='#fff2a5';ctx.font='10px sans-serif';ctx.fillText('+25',s.x,s.y+17)}
+for(let p of particles){ctx.globalAlpha=Math.max(0,p.life*2);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,4,4)}ctx.globalAlpha=1;
+if(paused&&running){ctx.fillStyle='#18241d88';ctx.fillRect(0,0,W,H);ctx.fillStyle='white';ctx.font='bold 36px sans-serif';ctx.textAlign='center';ctx.fillText('已暂停',W/2,H/2)}
+}
+function glcm(){// sample coarse battlefield into four grayscale levels, count horizontal neighboring pairs
+let bins=[];for(let r=0;r<rows;r++){let line=[];for(let col=0;col<cols;col++){let v=0.12; if(plants.some(p=>p.row===r&&p.col===col))v+=.36;if(zombies.some(z=>z.row===r&&Math.floor(z.x/cw)===col))v+=.43;if(shots.some(s=>s.row===r&&Math.floor(s.x/cw)===col))v+=.18;line.push(Math.min(3,Math.floor(v*4)))}bins.push(line)}
+let m=Array.from({length:4},()=>[0,0,0,0]),n=0;for(let r=0;r<rows;r++)for(let col=0;col<cols-1;col++){m[bins[r][col]][bins[r][col+1]]++;n++}
+let total=n||1;for(let i=0;i<4;i++)for(let j=0;j<4;j++)m[i][j]/=total;
+let contrast=0,energy=0,homo=0,mi=0,mj=0;for(let i=0;i<4;i++)for(let j=0;j<4;j++){let v=m[i][j];contrast+=(i-j)**2*v;energy+=v*v;homo+=v/(1+Math.abs(i-j));mi+=i*v;mj+=j*v}
+let vi=0,vj=0,cov=0;for(let i=0;i<4;i++)for(let j=0;j<4;j++){let v=m[i][j];vi+=(i-mi)**2*v;vj+=(j-mj)**2*v;cov+=(i-mi)*(j-mj)*v}let corr=vi*vj?cov/Math.sqrt(vi*vj):0;
+$('matrix').innerHTML='';for(let i=0;i<4;i++)for(let j=0;j<4;j++){let d=document.createElement('div');d.className='cell';let v=m[i][j];d.textContent=v.toFixed(2);let shade=Math.round(245-v*850);d.style.background=`rgb(${Math.max(35,shade)},${Math.max(45,shade)},${Math.max(35,shade)})`;d.style.color=v>.18?'#fff':'#243322';$('matrix').appendChild(d)}
+$('contrast').textContent=contrast.toFixed(2);$('energy').textContent=energy.toFixed(2);$('homogeneity').textContent=homo.toFixed(2);$('correlation').textContent=corr.toFixed(2);$('sample').textContent='有效邻接对：'+n;
+}
+function loop(t){let dt=Math.min(.04,(t-last)/1000||0);last=t;if(running&&!paused){update(dt);glcmTimer+=dt;if(glcmTimer>.35){glcm();glcmTimer=0}}draw();requestAnimationFrame(loop)}
+glcm();last=performance.now();requestAnimationFrame(loop);
+})();
+</script></body></html>
